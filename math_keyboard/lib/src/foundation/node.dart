@@ -221,13 +221,9 @@ class Cursor extends TeX {
 extension HexColor on Color {
   /// Converts a [Color] to a hex string to be used in TeX.
   String toHex() => '#'
-      '${_floatToInt8(r).toRadixString(16).padLeft(2, '0')}'
-      '${_floatToInt8(g).toRadixString(16).padLeft(2, '0')}'
-      '${_floatToInt8(b).toRadixString(16).padLeft(2, '0')}';
-
-  int _floatToInt8(double x) {
-    return (x * 255.0).round() & 0xff;
-  }
+      '${red.toRadixString(16).padLeft(2, '0')}'
+      '${green.toRadixString(16).padLeft(2, '0')}'
+      '${blue.toRadixString(16).padLeft(2, '0')}';
 }
 
 /// The state of a node when trying to navigate back- or forward.
