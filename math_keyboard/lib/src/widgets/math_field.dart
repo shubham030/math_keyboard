@@ -699,7 +699,10 @@ class MathFieldEditingController extends ChangeNotifier {
     );
     currentNode.setCursor();
 
-    return expression;
+    // Clean up {,} formatting to return clean coordinate pairs
+    // Since we've extended the TeX parser to handle both (3,4) and (3{,}4)
+    // we can now return the clean format
+    return expression.replaceAll('{,}', ',');
   }
 
   /// Clears the current value and sets it to the [expression] equivalent.

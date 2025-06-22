@@ -34,6 +34,7 @@ class TeXParser {
     /// r -> right parenthesis
     /// o+digit+(l) -> operator + precedence + (left-associativity)
     /// u -> other
+    /// c -> coordinate pair (atomic unit)
     final integer = digit().plus().flatten();
     final number = ((integer | char('.').and()) &
             (char('.') & integer).pick(1).optional() &
@@ -47,6 +48,24 @@ class TeXParser {
         (string('{') & letter().plus().flatten() & string('}')).pick(1);
 
     final basic = (number | pi | e | variable).map((v) => [v, 'b']);
+
+    // Coordinate pair pattern: (number{,}number) or (variable{,}variable) etc.
+    // Also handles raw commas: (number,number) or (variable,variable)
+    final coordinatePairWithBraces = (string('(') &
+            (number | variable | letter().plus().flatten()) &
+            string('{,}') &
+            (number | variable | letter().plus().flatten()) &
+            string(')'))
+        .map((v) => [v.join(''), 'c']);
+
+    final coordinatePairWithComma = (string('(') &
+            (number | variable | letter().plus().flatten()) &
+            char(',') &
+            (number | variable | letter().plus().flatten()) &
+            string(')'))
+        .map((v) => [v.join(''), 'c']);
+
+    final coordinatePair = coordinatePairWithBraces | coordinatePairWithComma;
 
     final sqrt =
         (string(r'\sqrt') & char('{').and()).map((v) => [r'\sqrt', 'f']);
@@ -115,10 +134,11 @@ class TeXParser {
     final other = (subNumber | underline).map((v) => [v, 'u']);
 
     final tokenize =
-        (basic | function | lp | rp | operator | other).star().end();
+        (coordinatePair | basic | function | lp | rp | operator | other)
+            .star()
+            .end();
 
-    final tex = inputString.replaceAll(' ', '');
-    _stream = tokenize.parse(tex).value;
+    _stream = tokenize.parse(inputString).value;
 
     if (_stream[0][0] == '-' && _stream[1][1].contains(RegExp('[bfl]'))) {
       _stream.insert(0, [0, 'b']);
@@ -149,6 +169,7 @@ class TeXParser {
           case 'b':
           case 'f':
           case 'l':
+          case 'c':
             _stream.insert(i + 1, [
               r'\times',
               ['o', 3, 'l'],
@@ -165,6 +186,7 @@ class TeXParser {
         switch (_stream[i + 1][1]) {
           case 'b':
           case 'f':
+          case 'c':
             insertTimes = true;
             break;
           case 'l':
@@ -210,6 +232,7 @@ class TeXParser {
         switch (_stream[i + 1][1]) {
           case 'l':
           case 'f':
+          case 'c':
             _stream.insert(i + 1, [
               r'\times',
               ['o', 3, 'l'],
@@ -245,6 +268,10 @@ class TeXParser {
     for (var i = 0; i < _stream.length; i++) {
       switch (_stream[i][1]) {
         case 'b':
+          _outputStack.add(_stream[i][0]);
+          break;
+        case 'c':
+          // Coordinate pairs are treated as atomic units
           _outputStack.add(_stream[i][0]);
           break;
         case 'f':
